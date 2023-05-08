@@ -12,9 +12,6 @@ public class NotificationTask {
     private String message;
     private long chatId;
     private LocalDateTime notificationDateTime;
-    @OneToOne
-    private User user;
-
 
     public long getId() {
         return id;
