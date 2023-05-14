@@ -5,6 +5,7 @@ import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.request.SendMessage;
+import com.pengrad.telegrambot.request.SendPhoto;
 import com.pengrad.telegrambot.response.SendResponse;
 import me.luppolem.firstbot.entity.NotificationTask;
 import me.luppolem.firstbot.service.NotificationTaskService;
@@ -14,6 +15,10 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -55,11 +60,30 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
                         String text = message.text();
 
                         if ("/start".equals(text)) {
-                            sendMessage(chatId,
-                                    """
-                                            Привет!
-                                            Я помогу тебе запланировать задачу. Отправь ее в формате: 03.05.2023 21:00 Сделать домашку
-                                            """);
+                            try {
+                                byte[] photo = Files.readAllBytes(
+                                        Paths.get(TelegramBotUpdatesListener.class.getResource("/test.jpg").toURI())
+                                );
+                                SendPhoto sendPhoto = new SendPhoto(chatId, photo);
+                                sendPhoto.caption(
+                                        """
+                                                Привет!
+                                                Я помогу тебе запланировать задачу. Отправь ее в формате: 03.05.2023 21:00 Сделать домашку
+                                                """
+                                );
+                                telegramBot.execute(sendPhoto);
+//                            } catch (IOException e) {
+//                                throw new RuntimeException(e);
+                            } catch (IOException | URISyntaxException e) {
+                                throw new RuntimeException(e);
+                            }
+
+
+//                            sendMessage(chatId,
+//                                    """
+//                                            Привет!
+//                                            Я помогу тебе запланировать задачу. Отправь ее в формате: 03.05.2023 21:00 Сделать домашку
+//                                            """);
                         } else if (text != null) {
                             Matcher matcher = pattern.matcher(text);
 
