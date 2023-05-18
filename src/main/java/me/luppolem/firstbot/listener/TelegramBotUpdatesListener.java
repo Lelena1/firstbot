@@ -3,9 +3,11 @@ package me.luppolem.firstbot.listener;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.Message;
+import com.pengrad.telegrambot.model.PhotoSize;
 import com.pengrad.telegrambot.model.Update;
+import com.pengrad.telegrambot.request.GetFile;
 import com.pengrad.telegrambot.request.SendMessage;
-import com.pengrad.telegrambot.request.SendPhoto;
+import com.pengrad.telegrambot.response.GetFileResponse;
 import com.pengrad.telegrambot.response.SendResponse;
 import me.luppolem.firstbot.entity.NotificationTask;
 import me.luppolem.firstbot.service.NotificationTaskService;
@@ -13,10 +15,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
@@ -24,6 +26,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -60,30 +63,12 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
                         String text = message.text();
 
                         if ("/start".equals(text)) {
-                            try {
-                                byte[] photo = Files.readAllBytes(
-                                        Paths.get(TelegramBotUpdatesListener.class.getResource("/test.jpg").toURI())
-                                );
-                                SendPhoto sendPhoto = new SendPhoto(chatId, photo);
-                                sendPhoto.caption(
-                                        """
-                                                Привет!
-                                                Я помогу тебе запланировать задачу. Отправь ее в формате: 03.05.2023 21:00 Сделать домашку
-                                                """
-                                );
-                                telegramBot.execute(sendPhoto);
-//                            } catch (IOException e) {
-//                                throw new RuntimeException(e);
-                            } catch (IOException | URISyntaxException e) {
-                                throw new RuntimeException(e);
-                            }
 
-
-//                            sendMessage(chatId,
-//                                    """
-//                                            Привет!
-//                                            Я помогу тебе запланировать задачу. Отправь ее в формате: 03.05.2023 21:00 Сделать домашку
-//                                            """);
+                            sendMessage(chatId,
+                                    """
+                                            Привет!
+                                            Я помогу тебе запланировать задачу. Отправь ее в формате: 03.05.2023 21:00 Сделать домашку
+                                            """);
                         } else if (text != null) {
                             Matcher matcher = pattern.matcher(text);
 
@@ -103,8 +88,28 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
                             } else {
                                 sendMessage(chatId, "Некорректный формат сообщения!");
                             }
+                        } else if (message.photo() != null) {
+
+                            PhotoSize photoSize = message.photo()[message.photo().length - 1];
+
+                            GetFileResponse getFileResponse = telegramBot.execute(
+                                    new GetFile(photoSize.fileId()));
+                            if (getFileResponse.isOk()) {
+                                try {
+                                    String extension = StringUtils.getFilenameExtension(
+                                            getFileResponse.file().filePath());
+                                    byte[] image = telegramBot.getFileContent(getFileResponse.file());
+                                    Files.write(Paths.get(UUID.randomUUID() + "." + extension), image);
+
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            }
                         }
+
+
                     });
+
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
         }
